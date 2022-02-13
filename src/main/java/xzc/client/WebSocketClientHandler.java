@@ -68,7 +68,7 @@ public class WebSocketClientHandler extends SimpleChannelInboundHandler<Object> 
             int gameId = packet.getGameId();
             MessageType type = packet.getType();
             long timestamp = packet.getTimestamp();
-            Map<String, Any> payloadMap = packet.getPayloadMap();
+            Any payload = packet.getPayload();
             System.out.println("messageId: " + messageId);
             System.out.println("gameId: " + gameId);
             System.out.println("type: " + type);
