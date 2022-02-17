@@ -1,45 +1,38 @@
 package xzc.client;
 
 import com.google.protobuf.Any;
-import com.google.protobuf.MessageLite;
-import com.google.protobuf.MessageLiteOrBuilder;
-import com.google.protobuf.StringValue;
 import io.netty.bootstrap.Bootstrap;
-import io.netty.buffer.ByteBuf;
-import io.netty.channel.*;
+import io.netty.channel.Channel;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
-import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.handler.codec.MessageToMessageDecoder;
-import io.netty.handler.codec.MessageToMessageEncoder;
 import io.netty.handler.codec.http.DefaultHttpHeaders;
-import io.netty.handler.codec.http.HttpClientCodec;
-import io.netty.handler.codec.http.HttpObjectAggregator;
-import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketClientHandshakerFactory;
-import io.netty.handler.codec.http.websocketx.WebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketVersion;
-import io.netty.handler.codec.http.websocketx.extensions.compression.WebSocketClientCompressionHandler;
-import io.netty.handler.codec.protobuf.ProtobufDecoder;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import xzc.server.proto.*;
 
 import java.net.URI;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 import java.util.UUID;
-
-import static io.netty.buffer.Unpooled.wrappedBuffer;
 
 public final class WebSocketClient {
 
-    static final String URL = System.getProperty("url", "ws://127.0.0.1:8800/ws");
+    private Sender sender;
 
-    public static void main(String[] args) throws Exception {
-        URI uri = new URI(URL);
+    private ClientInfo clientInfo;
+
+    public WebSocketClient(ClientInfo clientInfo) {
+        this.clientInfo = clientInfo;
+    }
+
+    public Sender sender() {
+        return this.sender;
+    }
+
+    public void connect(String url) throws Exception {
+        URI uri = new URI(url);
         String scheme = uri.getScheme() == null ? "ws" : uri.getScheme();
         final String host = uri.getHost() == null ? "127.0.0.1" : uri.getHost();
         final int port;
@@ -82,55 +75,16 @@ public final class WebSocketClient {
             Bootstrap b = new Bootstrap();
             b.group(group)
                     .channel(NioSocketChannel.class)
-                    .handler(new ChannelInitializer<SocketChannel>() {
-                        @Override
-                        protected void initChannel(SocketChannel ch) {
-                            ChannelPipeline p = ch.pipeline();
-                            if (sslCtx != null) {
-                                p.addLast(sslCtx.newHandler(ch.alloc(), host, port));
-                            }
-                            p.addLast(
-                                    new HttpClientCodec(),
-                                    new HttpObjectAggregator(8192),
-                                    WebSocketClientCompressionHandler.INSTANCE);
-                            // 协议包解码
-                            p.addLast(new MessageToMessageDecoder<WebSocketFrame>() {
-                                @Override
-                                protected void decode(ChannelHandlerContext ctx, WebSocketFrame frame, List<Object> objs) throws Exception {
-                                    ByteBuf buf = ((BinaryWebSocketFrame) frame).content();
-                                    objs.add(buf);
-                                    buf.retain();
-                                }
-                            });
-                            // 协议包编码
-                            p.addLast(new MessageToMessageEncoder<MessageLiteOrBuilder>() {
-                                @Override
-                                protected void encode(ChannelHandlerContext ctx, MessageLiteOrBuilder msg, List<Object> out) throws Exception {
-                                    ByteBuf result = null;
-                                    if (msg instanceof MessageLite) {
-                                        result = wrappedBuffer(((MessageLite) msg).toByteArray());
-                                    }
-                                    if (msg instanceof MessageLite.Builder) {
-                                        result = wrappedBuffer(((MessageLite.Builder) msg).build().toByteArray());
-                                    }
-
-                                    // ==== 上面代码片段是拷贝自TCP ProtobufEncoder 源码 ====
-                                    // 然后下面再转成websocket二进制流，因为客户端不能直接解析protobuf编码生成的
-
-                                    WebSocketFrame frame = new BinaryWebSocketFrame(result);
-                                    out.add(frame);
-                                }
-                            });
-
-                            // 协议包解码时指定Protobuf字节数实例化为CommonProtocol类型
-                            p.addLast(new ProtobufDecoder(SignalMessage.getDefaultInstance()));
-                            p.addLast(handler);
-                        }
-                    });
-
+                    .handler(new WebsocketClientChannelInitializer(uri, sslCtx, handler));
             Channel ch = b.connect(uri.getHost(), port).sync().channel();
             handler.handshakeFuture().sync();
-            echo(ch);
+            // 连接成功
+            this.sender = new Sender(ch);
+            // 登录
+            sender.login(LoginRequest.newBuilder()
+                    .setUsername(clientInfo.getUsername())
+                    .setToken(clientInfo.getToken())
+                    .build());
         } finally {
 //            group.shutdownGracefully();
         }
@@ -138,21 +92,15 @@ public final class WebSocketClient {
 
     private static void echo(Channel ch) {
         // 构建body
-        Any sunlong = Any.pack(StringValue.newBuilder().setValue("sunlong").build());
-//        String unpack = sunlong.unpack(String.class);
         XZCSignal loginSignal = XZCSignal
                 .newBuilder()
                 .setCommand(XZCCommand.LOGIN_REQUEST)
-                .setBody(Any.pack(LoginRequestBody.newBuilder()
+                .setBody(Any.pack(LoginRequest.newBuilder()
                         .setUsername("username")
                         .setToken("XXXXX")
                         .build()))
                 .build();
         // 构建 payload
-        Map<String, Any> payload = new HashMap<>();
-        Any.pack(StringValue.newBuilder().setValue("login").build());
-        payload.put("command", Any.pack(StringValue.newBuilder().setValue("login").build()));
-        payload.put("body", Any.pack(loginSignal));
         String uuid = UUID.randomUUID().toString();
         System.out.println("uuid: " + uuid);
         SignalMessage signalMessage = SignalMessage.newBuilder()

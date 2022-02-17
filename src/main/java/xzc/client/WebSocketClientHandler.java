@@ -1,14 +1,15 @@
 package xzc.client;
 
+import com.alibaba.fastjson.JSON;
 import com.google.protobuf.Any;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.*;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.websocketx.*;
 import io.netty.handler.codec.protobuf.ProtobufDecoder;
+import io.netty.util.AttributeKey;
 import io.netty.util.CharsetUtil;
-import xzc.server.proto.MessageType;
-import xzc.server.proto.SignalMessage;
+import xzc.server.proto.*;
 
 import java.util.Map;
 
@@ -63,17 +64,46 @@ public class WebSocketClientHandler extends SimpleChannelInboundHandler<Object> 
         }
 
         if (msg instanceof SignalMessage) {
-            SignalMessage packet = (SignalMessage) msg;
-            String messageId = packet.getMessageId();
-            int gameId = packet.getGameId();
-            MessageType type = packet.getType();
-            long timestamp = packet.getTimestamp();
-            Any payload = packet.getPayload();
+            SignalMessage signalMessage = (SignalMessage) msg;
+            String messageId = signalMessage.getMessageId();
+            int gameId = signalMessage.getGameId();
+            MessageType type = signalMessage.getType();
+            long timestamp = signalMessage.getTimestamp();
+            Any payload = signalMessage.getPayload();
             System.out.println("messageId: " + messageId);
             System.out.println("gameId: " + gameId);
             System.out.println("type: " + type);
             System.out.println("timestamp: " + timestamp);
-
+            if (type == MessageType.SIGNAL) {
+                if (payload.is(XZCSignal.class)) {
+                    XZCSignal signal = payload.unpack(XZCSignal.class);
+                    XZCCommand command = signal.getCommand();
+                    Any body = signal.getBody();
+                    switch(command) {
+                        case LOGIN_RESPONSE:
+                            if (body.is(LoginResponse.class)) {
+                                System.out.println("Received login response");
+                                LoginResponse loginResponse = body.unpack(LoginResponse.class);
+                                boolean success = loginResponse.getSuccess();
+                                System.out.println(success);
+                                UserInfo userInfo = loginResponse.getUserInfo();
+                                System.out.println(userInfo.toString());
+                            }
+                            break;
+                        case QUICK_JOIN_ROOM_RESPONSE:
+                            if (body.is(QuickJoinRoomResponse.class)) {
+                                System.out.println("Received quick join response");
+                                QuickJoinRoomResponse quickJoinRoomResponse = body.unpack(QuickJoinRoomResponse.class);
+                                long roomId = quickJoinRoomResponse.getRoomId();
+                                Map<Long, Participant> participantsMap = quickJoinRoomResponse.getParticipantsMap();
+                                System.out.println(JSON.toJSONString(participantsMap));
+                            }
+                            break;
+                        default:
+                            break;
+                    }
+                }
+            }
             System.out.println("\n<<<<<<<<<<<<收到服务端协议:" + messageId + "<<<<<<<<<<<<");
             return;
         }
