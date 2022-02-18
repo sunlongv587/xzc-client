@@ -1,12 +1,9 @@
 package xzc.client;
 
 import com.google.protobuf.Any;
-import com.google.protobuf.StringValue;
 import io.netty.channel.Channel;
 import xzc.server.proto.*;
 
-import java.util.HashMap;
-import java.util.Map;
 import java.util.UUID;
 
 public class Sender {

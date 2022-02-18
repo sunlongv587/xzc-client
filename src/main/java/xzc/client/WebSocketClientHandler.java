@@ -82,7 +82,7 @@ public class WebSocketClientHandler extends SimpleChannelInboundHandler<Object> 
                     switch(command) {
                         case LOGIN_RESPONSE:
                             if (body.is(LoginResponse.class)) {
-                                System.out.println("Received login response");
+                                System.out.println(">>>>>>>>>>>Received login response<<<<<<<<<<<");
                                 LoginResponse loginResponse = body.unpack(LoginResponse.class);
                                 boolean success = loginResponse.getSuccess();
                                 System.out.println(success);
@@ -92,9 +92,10 @@ public class WebSocketClientHandler extends SimpleChannelInboundHandler<Object> 
                             break;
                         case QUICK_JOIN_ROOM_RESPONSE:
                             if (body.is(QuickJoinRoomResponse.class)) {
-                                System.out.println("Received quick join response");
+                                System.out.println(">>>>>>>>>>>Received quick join response<<<<<<<<<<<");
                                 QuickJoinRoomResponse quickJoinRoomResponse = body.unpack(QuickJoinRoomResponse.class);
                                 long roomId = quickJoinRoomResponse.getRoomId();
+                                System.out.println("roomId: " + roomId);
                                 Map<Long, Participant> participantsMap = quickJoinRoomResponse.getParticipantsMap();
                                 System.out.println(JSON.toJSONString(participantsMap));
                             }
