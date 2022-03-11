@@ -1,22 +1,24 @@
 package xzc.client;
 
-import com.alibaba.fastjson.JSON;
 import com.google.protobuf.Any;
-import io.netty.buffer.ByteBuf;
 import io.netty.channel.*;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.websocketx.*;
-import io.netty.handler.codec.protobuf.ProtobufDecoder;
-import io.netty.util.AttributeKey;
 import io.netty.util.CharsetUtil;
-import xzc.server.proto.*;
-
-import java.util.Map;
+import xzc.server.proto.MessageType;
+import xzc.server.proto.SignalMessage;
+import xzc.server.proto.XZCSignal;
 
 public class WebSocketClientHandler extends SimpleChannelInboundHandler<Object> {
 
     private final WebSocketClientHandshaker handshaker;
     private ChannelPromise handshakeFuture;
+    private SignalEventListener signalEventListener;
+
+    public WebSocketClientHandler setSignalEventListener(SignalEventListener signalEventListener) {
+        this.signalEventListener = signalEventListener;
+        return this;
+    }
 
     public WebSocketClientHandler(WebSocketClientHandshaker handshaker) {
         this.handshaker = handshaker;
@@ -77,32 +79,7 @@ public class WebSocketClientHandler extends SimpleChannelInboundHandler<Object> 
             if (type == MessageType.SIGNAL) {
                 if (payload.is(XZCSignal.class)) {
                     XZCSignal signal = payload.unpack(XZCSignal.class);
-                    XZCCommand command = signal.getCommand();
-                    Any body = signal.getBody();
-                    switch(command) {
-                        case LOGIN_RESPONSE:
-                            if (body.is(LoginResponse.class)) {
-                                System.out.println(">>>>>>>>>>>Received login response<<<<<<<<<<<");
-                                LoginResponse loginResponse = body.unpack(LoginResponse.class);
-                                boolean success = loginResponse.getSuccess();
-                                System.out.println(success);
-                                UserInfo userInfo = loginResponse.getUserInfo();
-                                System.out.println(userInfo.toString());
-                            }
-                            break;
-                        case QUICK_JOIN_ROOM_RESPONSE:
-                            if (body.is(QuickJoinRoomResponse.class)) {
-                                System.out.println(">>>>>>>>>>>Received quick join response<<<<<<<<<<<");
-                                QuickJoinRoomResponse quickJoinRoomResponse = body.unpack(QuickJoinRoomResponse.class);
-                                long roomId = quickJoinRoomResponse.getRoomId();
-                                System.out.println("roomId: " + roomId);
-                                Map<Long, Participant> participantsMap = quickJoinRoomResponse.getParticipantsMap();
-                                System.out.println(JSON.toJSONString(participantsMap));
-                            }
-                            break;
-                        default:
-                            break;
-                    }
+                    signalEventListener.listen(signal);
                 }
             }
             System.out.println("\n<<<<<<<<<<<<收到服务端协议:" + messageId + "<<<<<<<<<<<<");

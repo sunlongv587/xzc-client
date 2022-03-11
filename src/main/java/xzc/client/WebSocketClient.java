@@ -19,9 +19,13 @@ import java.util.UUID;
 
 public final class WebSocketClient {
 
+    private ClientContext clientContext = new ClientContext();
+
     private Sender sender;
 
     private ClientInfo clientInfo;
+
+    private SignalEventListener signalEventListener;
 
     public WebSocketClient(ClientInfo clientInfo) {
         this.clientInfo = clientInfo;
@@ -29,6 +33,14 @@ public final class WebSocketClient {
 
     public Sender sender() {
         return this.sender;
+    }
+
+    public ClientInfo clientInfo() {
+        return this.clientInfo;
+    }
+
+    public ClientContext clientContext() {
+        return this.clientContext;
     }
 
     public void connect(String url) throws Exception {
@@ -71,7 +83,6 @@ public final class WebSocketClient {
                     new WebSocketClientHandler(
                             WebSocketClientHandshakerFactory.newHandshaker(
                                     uri, WebSocketVersion.V13, null, true, new DefaultHttpHeaders()));
-
             Bootstrap b = new Bootstrap();
             b.group(group)
                     .channel(NioSocketChannel.class)
@@ -80,6 +91,9 @@ public final class WebSocketClient {
             handler.handshakeFuture().sync();
             // 连接成功
             this.sender = new Sender(ch);
+            // 设置监听器
+            this.signalEventListener = new SignalEventListener(clientContext, clientInfo);
+            handler.setSignalEventListener(signalEventListener);
             // 登录
             sender.login(LoginRequest.newBuilder()
                     .setUsername(clientInfo.getUsername())
