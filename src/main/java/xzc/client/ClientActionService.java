@@ -6,7 +6,8 @@ import xzc.server.proto.*;
 public class ClientActionService {
 
 
-    public static void quickJoin(WebSocketClient client) {
+    public static void quickJoin(WebSocketClient client, ResponseCallback<QuickJoinRoomResponse> responseCallback) throws InterruptedException {
+        client.signalEventListener().setCallback(XZCCommand.QUICK_JOIN_ROOM_RESPONSE, responseCallback);
         client.sender()
                 .sendSignal(XZCSignal.newBuilder()
                         .setCommand(XZCCommand.QUICK_JOIN_ROOM_REQUEST)
