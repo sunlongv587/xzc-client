@@ -15,8 +15,11 @@ export default class GameScene extends cc.Component {
     @property(cc.Label)
     label: cc.Label = null;
 
-    @property
-    text: string = 'hello';
+    @property(cc.Prefab)
+    pokerPrefab: cc.Prefab = null;
+
+    @property(cc.Node)
+    pokerContainer: cc.Node = null;
 
     // LIFE-CYCLE CALLBACKS:
 
@@ -25,7 +28,8 @@ export default class GameScene extends cc.Component {
     start () {
         this.label.string = "这是游戏场景。。。"
         let gameManager = new GameManager();
-
+        gameManager.init(this.pokerContainer, this.pokerPrefab);
+        gameManager.start()
 
     }
 

@@ -26,7 +26,7 @@ export default class SplashScene extends cc.Component {
             cc.director.loadScene('StartScene', () => {
                 console.log("加载完毕！！！")
             })
-        }, 2000)
+        }, 200)
     }
 
     // update (dt) {}

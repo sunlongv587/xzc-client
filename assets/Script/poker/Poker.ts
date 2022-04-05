@@ -1,3 +1,5 @@
+import {Suit} from './Constant'
+
 const A2_10JQK = 'NAN,A,2,3,4,5,6,7,8,9,10,J,Q,K'.split(',');
 export default class Poker {
 
@@ -9,9 +11,9 @@ export default class Poker {
 
 
     constructor(point: number, suit: Suit) {
-        this.id = (this.suit - 1) * 13 + (this.point - 1)
         this.point = point;
         this.suit = suit;
+        this.id = (this.suit - 1) * 13 + (this.point - 1)
     }
 
     public getPointName(): string {
