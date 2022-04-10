@@ -1,0 +1,28 @@
+import XzcGameManager from "./XzcGameManager";
+import XzcGameView from "./XzcGameView";
+
+const {ccclass, property} = cc._decorator;
+
+@ccclass
+export default class XzcGameScene extends cc.Component {
+
+    @property(cc.Prefab)
+    xzcGameViewPrefab: cc.Prefab = null;
+
+    xzcGameView: XzcGameView = null;
+
+    gameManager: XzcGameManager = null;
+
+    // onLoad () {}
+
+    start () {
+        // 这是游戏场景。。。
+        this.xzcGameView = cc.instantiate(this.xzcGameViewPrefab).getComponent(XzcGameView);
+        this.node.addChild(this.xzcGameView.node);
+        this.gameManager = new XzcGameManager();
+        this.gameManager.init(this.xzcGameView);
+        this.gameManager.startGame();
+    }
+
+    // update (dt) {}
+}

@@ -20,15 +20,20 @@ const {ccclass, property} = cc._decorator;
 export default class StartScene extends cc.Component {
 
     @property(cc.Button)
-    playBtn: cc.Button = null;
+    playPokerBtn: cc.Button = null;
+
+    @property(cc.Button)
+    playXzcBtn: cc.Button = null;
 
     // LIFE-CYCLE CALLBACKS:
 
     // onLoad () {}
 
     start() {
-        let fcNetNode = new NetNode();//实例化一个网络节点
-        fcNetNode.init(new WebSock(), new FCProtoBufProtocol(), new NetTips());//初始化
+        //实例化一个网络节点
+        let fcNetNode = new NetNode();
+        //初始化
+        fcNetNode.init(new WebSock(), new FCProtoBufProtocol(), new NetTips());
         //创建连接
         NetManager.getInstance().setNetNode(fcNetNode);
         NetManager.getInstance().connect({url: GlobalCfg.wsUrl});
@@ -49,7 +54,8 @@ export default class StartScene extends cc.Component {
         console.log(buf);
         NetManager.getInstance().send(buf);
 
-        this.playBtn.node.on('click', this.onPlayBtnClick.bind(this))
+        this.playPokerBtn.node.on('click', this.onPlayPokerBtnClick.bind(this))
+        this.playXzcBtn.node.on('click', this.onPlayXzcBtnClick.bind(this))
         // setTimeout(() => {
         //     cc.director.loadScene('GameScene', () => {
         //         console.log("加载完毕！！！")
@@ -57,11 +63,18 @@ export default class StartScene extends cc.Component {
         // }, 2000)
     }
 
-    onPlayBtnClick(button) {
+    onPlayPokerBtnClick(button) {
         cc.director.loadScene('GameScene', () => {
             console.log("加载完毕！！！")
         })
     }
+
+    onPlayXzcBtnClick(button) {
+        cc.director.loadScene('XzcGameScene', () => {
+            console.log("加载完毕！！！")
+        })
+    }
+
 
     // update (dt) {}
 
