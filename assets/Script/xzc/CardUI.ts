@@ -17,23 +17,6 @@ export default class CardUI extends cc.Component {
     @property([cc.SpriteFrame])
     private iconSprites: cc.SpriteFrame[] = [];
 
-    // @property(cc.Sprite)
-    // bigSuitSprite: cc.Sprite = null;
-    // @property(cc.Sprite)
-    // smallSuitSprite: cc.Sprite = null;
-
-    // @property(cc.SpriteFrame)
-    // private texFrontBG: cc.SpriteFrame = null;
-    // @property(cc.SpriteFrame)
-    // private texBackBG: cc.SpriteFrame = null;
-
-    // @property([cc.SpriteFrame])
-    // private bigSuits: cc.SpriteFrame[] = [];
-    // @property([cc.SpriteFrame])
-    // private smallSuits: cc.SpriteFrame[] = [];
-    // @property([cc.SpriteFrame])
-    // private texFaces: cc.SpriteFrame[] = [];
-
     // 字体颜色
     @property(cc.Color)
     private orangeTextColor: cc.Color = cc.Color.ORANGE;
