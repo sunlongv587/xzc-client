@@ -10,8 +10,12 @@ export class GamerModel {
     public coins: number = 4;
 
     public avatar: string;
-
-    public disCard: Card;
+    // 弃牌
+    public discarded: Card;
+    // 手牌
+    public handCard: Card;
+    // 抓的牌
+    public takenCard: Card;
 
     public state: string;
 

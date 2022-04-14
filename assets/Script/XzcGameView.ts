@@ -73,14 +73,11 @@ export default class XzcGameView extends cc.Component {
     // 玩家人数对应的布局
     private gamerAreaMap: Map<number, cc.Node> = new Map<number, cc.Node>();
 
-
-
-
-    public init(xzcCard: Card, myCard: Card, cardCount: number, me: GamerModel, gamerMap: Map<number, GamerModel>, orderlyGamerIds: number[]) {
+    public init(xzcCard: Card, myCard: Card, cardCount: number, myId: number, gamerMap: Map<number, GamerModel>, orderlyGamerIds: number[]) {
         this.initGamerAreaMap();
         this.initXzcArea(xzcCard, cardCount);
         this.initMyArea(myCard);
-        this.initGamersArea(orderlyGamerIds, gamerMap, me.id)
+        this.initGamersArea(orderlyGamerIds, gamerMap, myId)
     }
 
     public initGamerAreaMap() {
