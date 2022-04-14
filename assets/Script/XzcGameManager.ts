@@ -70,7 +70,7 @@ export default class XzcGameManager {
                     // 接收到行动指令之后，将按钮更改为抓牌
                     msg.xzcGameView.updateOperateArea("抓牌", msg.takeCard.bind(msg), "翻小早川牌", msg.changeXzcCard.bind(msg));
                 },
-                changeXzcCard: function (event, from, to, msg) {
+                onchangeXzcCard: function (event, from, to, msg) {
                     // 变为等待状态
                     msg.xzcGameView.cleanOperateArea();
                 },
