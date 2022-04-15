@@ -22,11 +22,7 @@ export default class XzcGameScene extends cc.Component {
         this.xzcGameView = cc.instantiate(this.xzcGameViewPrefab).getComponent(XzcGameView);
         this.node.addChild(this.xzcGameView.node);
         // 通过服务器获得
-        let gamer = new GamerModel();
-        gamer.nickname = "快如子弹";
-        gamer.id = 1;
-        gamer.coins = 4;
-        // gamer.state =
+        let gamer = new GamerModel(1, "快如子弹");
 
         this.gameManager = new XzcGameManager();
         this.gameManager.init(this.xzcGameView, gamer);

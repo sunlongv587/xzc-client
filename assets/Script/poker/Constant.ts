@@ -10,8 +10,8 @@ export enum Suit {
 export enum GameStep {
     Initial = 0,
     Action = 1, // 行动阶段
-    bet = 2, // 下注阶段
-    settle = 3, // 结算阶段
+    Bet = 2, // 下注阶段
+    Settle = 3, // 结算阶段
 }
 
 export enum GamerState {
