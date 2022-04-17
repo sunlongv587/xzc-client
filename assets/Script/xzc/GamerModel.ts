@@ -17,7 +17,7 @@ export class GamerModel {
     // 抓的牌
     public takenCard: Card;
 
-    public state: string;
+    public state: string = 'WAIT';
 
     constructor(id: number, nickname: string) {
         this.id = id;

@@ -31,11 +31,19 @@ export class StandAloneService {
     // 当前行动的玩家 索引
     private orderedGamersIndex = 0;
     // 本轮加入赌局的玩家
-    private gambler: number[] = [];
+    private gamblers: Object[] = [];
     // 小早川牌
     private xzcCard: Card;
+    // 小早川硬币数
+    private xzcCoinCount: number = 8;
     // 当前进行的阶段
     private step: GameStep = GameStep.Initial;
+
+    private actionCallback: Function = null;
+
+    private betCallback: Function = null;
+
+    private stateChangeCallback: Function = null;
 
     public createNewGameByGamersCount(count: number) {
         this.createCardLibrary();
@@ -97,8 +105,17 @@ export class StandAloneService {
         return this.cardLibrary.length - this.cardLibraryIndex;
     }
 
+
+    public getXzcCoinCount(): number {
+        return this.xzcCoinCount;
+    }
+
     public getXzcCard(): Card {
         return this.xzcCard;
+    }
+
+    public getGamblers(): Object[] {
+        return this.gamblers;
     }
 
     public getGamerMap(): Map<number, GamerModel> {
@@ -123,8 +140,7 @@ export class StandAloneService {
         }
     }
 
-
-    public nextRobotAction() {
+    public nextRobotAction(): GamerModel {
         let curId = this.orderlyGamers[this.orderedGamersIndex];
         if (curId == this.me.id) {
             throw new Error("current not is robot.")
@@ -138,6 +154,11 @@ export class StandAloneService {
             this.robotBet(curGamer);
         }
         this.incrOrderedGamersIndex();
+        return curGamer;
+        // return this.orderlyGamers[this.orderedGamersIndex] != this.me.id;
+    }
+
+    public hasNext():boolean {
         return this.orderlyGamers[this.orderedGamersIndex] != this.me.id;
     }
 
@@ -197,7 +218,7 @@ export class StandAloneService {
         } else if (this.step == GameStep.Bet) {
             this.step = GameStep.Settle;
             // 触发结算
-            this.settleRound();
+            // this.settleRound();
         } else if (this.step == GameStep.Settle) {
             this.step = GameStep.Initial;
         }
@@ -217,7 +238,7 @@ export class StandAloneService {
                 gamer.coins -= 1;
             }
             // 加入到下注队列
-            this.gambler.push(gamer.id);
+            this.gamblers.push({"id": gamer.id, "betIn": betIn});
             this.currentRoundBetIn += betIn;
             gamer.state = 'IN_BET';
         } else {
@@ -229,49 +250,46 @@ export class StandAloneService {
     // 结算本轮
     public settleRound() {
         let isLastRound = this.currentRound == this.totalRound - 1;
-        let firstGamer = this.gamerMap.get(this.gambler[0]);
-        if (this.gambler.length == 1) {
+        let firstGamer = this.gamerMap.get(this.gamblers[0]["id"]);
+        if (this.gamblers.length == 1) {
             // 只有一个人的情况，自己赢
             this.win(firstGamer);
         } else {
             // 找出分数最小的玩家，应该在下注的时候就把这个找出来
             let minPointGamer = firstGamer;
-            for (let i = 1; i < this.gambler.length; i++) {
-                let gamer = this.gamerMap.get(this.gambler[i]);
+            for (let i = 1; i < this.gamblers.length; i++) {
+                let gamer = this.gamerMap.get(this.gamblers[i]["id"]);
                 if (firstGamer.handCard.point > gamer.handCard.point) {
                     minPointGamer = gamer;
                 }
             }
             // 最小分数的玩家要加上小早川的分数
-            let finalPoints = [];
-            for (let id of this.gambler) {
-                if (id == minPointGamer.id) {
-                    finalPoints.push({
-                        "id": id,
-                        "point": minPointGamer.handCard.point,
-                        "finalPoint": minPointGamer.handCard.point + this.xzcCard.point
-                    })
+            // let finalPoints = [];
+            for (let gambler of this.gamblers) {
+                if (gambler['id'] == minPointGamer.id) {
+                    gambler["point"] = minPointGamer.handCard.point;
+                    gambler["finalPoint"] = minPointGamer.handCard.point + this.xzcCard.point;
                 } else {
-                    let gamer = this.gamerMap.get(id);
-                    finalPoints.push({
-                        "id": id,
-                        "point": gamer.handCard.point,
-                        "finalPoint": gamer.handCard.point
-                    })
+                    let gamer = this.gamerMap.get(gambler['id']);
+                    gamer["point"] = gamer.handCard.point;
+                    gamer["finalPoint"] = gamer.handCard.point;
                 }
             }
-            let winner = finalPoints[0];
-            for (let i = 1; i < finalPoints.length; i++) {
-                if (finalPoints[i].finalPoint > winner.finalPoint) {
-                    winner = finalPoints[i];
+            let winner = this.gamblers[0];
+            for (let i = 1; i < this.gamblers.length; i++) {
+                if (this.gamblers[i]['finalPoint'] > winner['finalPoint']) {
+                    winner = this.gamblers[i];
                 }
             }
+            winner['isWin'] = true;
             // 发奖
-            this.win(this.gamerMap.get(winner.id));
+            this.win(this.gamerMap.get(winner['id']));
         }
         // 回合结束
         if (isLastRound) {
             // todo 游戏结束
+            console.log("游戏结束");
+            this.gameOver();
         } else {
             this.currentRound++;
             // todo 初始化新的一轮
@@ -282,6 +300,12 @@ export class StandAloneService {
 
     public win(gamer: GamerModel) {
         gamer.coins += this.currentRoundBetIn;
+        if (this.currentRound == this.totalRound - 1) {
+            // 最后一轮的 小早川奖励是2
+            this.xzcCoinCount -= 2;
+        } else {
+            this.xzcCoinCount -= 1;
+        }
     }
 
     public initRound() {
@@ -301,7 +325,7 @@ export class StandAloneService {
             this.currentRoundBetIn = 1;
         }
         this.winner = null;
-        this.gambler = [];
+        this.gamblers = [];
     }
 
     public gameOver() {

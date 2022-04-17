@@ -46,4 +46,6 @@ export default class GameManager {
         pokerUI.node.setPosition(Math.random() * 500 - 200, Math.random() * 500 - 200)
         return pokerUI;
     }
+
+
 }

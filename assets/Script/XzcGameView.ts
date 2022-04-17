@@ -70,12 +70,12 @@ export default class XzcGameView extends cc.Component {
     // 玩家人数对应的布局
     private countGamerAreaMap: Map<number, cc.Node[]> = new Map<number, cc.Node[]>();
 
-    // 玩家人数对应的布局
-    private gamerAreaMap: Map<number, cc.Node> = new Map<number, cc.Node>();
+    // 玩家id对应的区域
+    private gamerAreaMap: Map<number, GamerAreaUI> = new Map<number, GamerAreaUI>();
 
     public init(xzcCard: Card, myCard: Card, cardCount: number, myId: number, gamerMap: Map<number, GamerModel>, orderlyGamerIds: number[]) {
         this.initGamerAreaMap();
-        this.initXzcArea(xzcCard, cardCount);
+        this.updateXzcView(xzcCard, cardCount, 8);
         this.initMyArea(myCard);
         this.initGamersArea(orderlyGamerIds, gamerMap, myId)
     }
@@ -127,9 +127,9 @@ export default class XzcGameView extends cc.Component {
     public putGamerArea(gamerArea: cc.Node, gamer: GamerModel) {
         let gamerAreaNode = cc.instantiate(this.gamerArea);
         let gamerAreaUI = gamerAreaNode.getComponent(GamerAreaUI);
-        gamerAreaUI.init(gamer.nickname, `硬币：${gamer.coins}`, gamer.avatar);
+        gamerAreaUI.initByGamer(gamer);
         gamerArea.addChild(gamerAreaUI.node);
-        this.gamerAreaMap.set(gamer.id, gamerArea);
+        this.gamerAreaMap.set(gamer.id, gamerAreaUI);
     }
 
     public putXzcCard(card: Card) {
@@ -210,5 +210,21 @@ export default class XzcGameView extends cc.Component {
         rightButtonArea.removeAllChildren();
         rightButtonArea.opacity = 0;
     }
+
+    public updateGamerView(gamer: GamerModel) {
+        let gamerArea = this.gamerAreaMap.get(gamer.id);
+        gamerArea.updateState(gamer.state, `硬币：${gamer.coins}`, gamer.discarded);
+    }
+
+    public updateXzcView(xzcCard: Card, cardCount: number, coinCount: number) {
+        // 设置小早川牌
+        this.putXzcCard(xzcCard);
+        // 设置牌堆剩余牌数量
+        this.cardCountLabel.string = `剩余牌：${cardCount}`;
+        // 设置小早川剩余硬币数量
+        this.coinCountLabel.string = `硬币：${coinCount}`;
+    }
+
+    public viewRoundResult() {}
 
 }

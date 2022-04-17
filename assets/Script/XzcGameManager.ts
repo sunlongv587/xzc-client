@@ -37,6 +37,42 @@ export default class XzcGameManager {
             this.gameService.getGamerMap(),
             this.gameService.getOrderlyGamers());
         // 初始化状态机
+        let afterAction = function (event, from, to, msg) {
+            // 弃牌之后，变为等待状态
+            msg.xzcGameView.cleanOperateArea();
+            // 开始调用机器人操作，直到所有的机器人都操作完毕
+            let hasNext = msg.gameService.hasNext();
+            while (hasNext) {
+                try {
+                    let robot = msg.gameService.nextRobotAction();
+                    console.log('robot action')
+                    console.log(robot);
+                    msg.xzcGameView.updateGamerView(robot);
+                    msg.xzcGameView.updateXzcView(msg.gameService.getXzcCard(), msg.gameService.getCardCount(), msg.gameService.getXzcCoinCount());
+                    hasNext = msg.gameService.hasNext();
+                } catch (e) {
+                    if (msg.gameService.getStep() == GameStep.Action) {
+                        // 触发状态机
+                        msg.stateMachine.recvAction(msg);
+                    } else if (msg.gameService.getStep() == GameStep.Bet) {
+                        msg.stateMachine.recvBet(msg);
+                    }
+                    hasNext = false;
+                }
+                // 故意加一点延迟
+                msg.sleep(5000);
+            }
+            if (msg.gameService.getStep() == GameStep.Action) {
+                // 触发状态机
+                msg.stateMachine.recvAction(msg);
+            } else if (msg.gameService.getStep() == GameStep.Bet) {
+                msg.stateMachine.recvBet(msg);
+            } else if (msg.gameService.getStep() == GameStep.Settle) {
+                // 触发结算
+                msg.gameService.settleRound();
+                msg.roundEnd();
+            }
+        };
         this.stateMachine = StateMachine.create({
             initial: 'WAIT',
             error: function (eventName, from, to, args, errorCode, errorMessage) {
@@ -55,40 +91,13 @@ export default class XzcGameManager {
                 {name: 'recvBet', from: 'WAIT_BET', to: 'BET'},
                 // 下注后，进入下注状态
                 {name: 'betting', from: 'BET', to: 'IN_BET'},
-                 // 跳过下注后，进入等待状态
+                // 跳过下注后，进入等待状态
                 {name: 'pass', from: 'BET', to: 'WAIT'},
                 // 本轮结束
                 {name: 'roundEnd', from: ['BET', 'WAIT', 'WAIT_BET', 'ACTION', 'DISCARD', 'BET', 'IN_BET'], to: 'WAIT'},
             ],
             callbacks: {
-                ondiscard: function (event, from, to, msg) {
-                    // 弃牌之后，变为等待状态
-                    msg.xzcGameView.cleanOperateArea();
-                    // 开始调用机器人操作，直到所有的机器人都操作完毕
-                    let hasNext = true;
-                    while (hasNext) {
-                        try {
-                            hasNext = msg.gameService.nextRobotAction();
-                        } catch (e) {
-                            if (msg.gameService.getStep() == GameStep.Action) {
-                                // 触发状态机
-                                msg.stateMachine.recvAction(msg);
-                            } else if (msg.gameService.getStep() == GameStep.Bet) {
-                                msg.stateMachine.recvBet(msg);
-                            }
-                            hasNext = false;
-                        }
-                        msg.sleep(500);
-                    }
-                    if (msg.gameService.getStep() == GameStep.Action) {
-                        // 触发状态机
-                        msg.stateMachine.recvAction(msg);
-                    } else if (msg.gameService.getStep() == GameStep.Bet) {
-                        msg.stateMachine.recvBet(msg);
-                    } else if (msg.gameService.getStep() == GameStep.Settle) {
-                        msg.gameService.settleRound();
-                    }
-                },
+                ondiscard: afterAction,
                 ontakeCard: function (event, from, to, msg) {
                     // 抓完牌之后，将按钮更改为弃牌
                     msg.xzcGameView.updateOperateArea("弃手牌", msg.disHandCard.bind(msg), "弃新牌", msg.disTakenCard.bind(msg));
@@ -101,93 +110,10 @@ export default class XzcGameManager {
                     // 接收到行动指令之后，将按钮更改为下注
                     msg.xzcGameView.updateOperateArea("下注", msg.bet.bind(msg), "不下注", msg.pass.bind(msg));
                 },
-                onchangeXzcCard: function (event, from, to, msg) {
-                    // 变为等待状态
-                    msg.xzcGameView.cleanOperateArea();
-                    // 开始调用机器人操作，直到所有的机器人都操作完毕
-                    let hasNext = true;
-                    while (hasNext) {
-                        try {
-                            hasNext = msg.gameService.nextRobotAction();
-                        } catch (e) {
-                            if (msg.gameService.getStep() == GameStep.Action) {
-                                // 触发状态机
-                                msg.stateMachine.recvAction(msg);
-                            } else if (msg.gameService.getStep() == GameStep.Bet) {
-                                msg.stateMachine.recvBet(msg);
-                            }
-                            hasNext = false;
-                        }
-                        msg.sleep(500);
-                    }
-                    if (msg.gameService.getStep() == GameStep.Action) {
-                        // 触发状态机
-                        msg.stateMachine.recvAction(msg);
-                    } else if (msg.gameService.getStep() == GameStep.Bet) {
-                        msg.stateMachine.recvBet(msg);
-                    } else if (msg.gameService.getStep() == GameStep.Settle) {
-                        // msg.gameService.settleRound();
-                    }
-                },
-                onbetting: function (event, from, to, msg) {
-                    // 等待结算状态
-                    msg.xzcGameView.cleanOperateArea();
-                    // 开始调用机器人操作，直到所有的机器人都操作完毕
-                    let hasNext = true;
-                    while (hasNext) {
-                        try {
-                            hasNext = msg.gameService.nextRobotAction();
-                        } catch (e) {
-                            if (msg.gameService.getStep() == GameStep.Action) {
-                                // 触发状态机
-                                msg.stateMachine.recvAction(msg);
-                            } else if (msg.gameService.getStep() == GameStep.Bet) {
-                                msg.stateMachine.recvBet(msg);
-                            }
-                            hasNext = false;
-                        }
-                        msg.sleep(500);
-                    }
-                    if (msg.gameService.getStep() == GameStep.Action) {
-                        // 触发状态机
-                        msg.stateMachine.recvAction(msg);
-                    } else if (msg.gameService.getStep() == GameStep.Bet) {
-                        msg.stateMachine.recvBet(msg);
-                    } else if (msg.gameService.getStep() == GameStep.Settle) {
-                        // msg.gameService.settleRound();
-                    }
-
-                },
-                 onpass: function (event, from, to, msg) {
-                    // 等待结算状态
-                    msg.xzcGameView.cleanOperateArea();
-                     // 开始调用机器人操作，直到所有的机器人都操作完毕
-                     let hasNext = true;
-                     while (hasNext) {
-                         try {
-                             hasNext = msg.gameService.nextRobotAction();
-                         } catch (e) {
-                             if (msg.gameService.getStep() == GameStep.Action) {
-                                 // 触发状态机
-                                 msg.stateMachine.recvAction(msg);
-                             } else if (msg.gameService.getStep() == GameStep.Bet) {
-                                 msg.stateMachine.recvBet(msg);
-                             }
-                             hasNext = false;
-                         }
-                         msg.sleep(500);
-                     }
-                     if (msg.gameService.getStep() == GameStep.Action) {
-                         // 触发状态机
-                         msg.stateMachine.recvAction(msg);
-                     } else if (msg.gameService.getStep() == GameStep.Bet) {
-                         msg.stateMachine.recvBet(msg);
-                     } else if (msg.gameService.getStep() == GameStep.Settle) {
-                         msg.gameService.settleRound();
-                     }
-
-                 }
-                    //     onyellow: function (event, from, to) {
+                onchangeXzcCard: afterAction,
+                onbetting: afterAction,
+                onpass: afterAction
+                //     onyellow: function (event, from, to) {
                 //         document.body.className = 'yellow';
                 //     },
                 //     onred: function (event, from, to) {
@@ -292,5 +218,16 @@ export default class XzcGameManager {
         console.log(this.stateMachine.current);
     }
 
+    public roundEnd() {
+        let gambler = this.gameService.getGamblers();
+        this.stateMachine.roundEnd(this);
+        // 显示结算结果
+        console.log("显示结算结果");
+        // this.xzcGameView.
+    }
+
+    public roundStart() {
+
+    }
 
 }
